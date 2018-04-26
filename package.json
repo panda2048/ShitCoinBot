@@ -1,0 +1,26 @@
+{
+  "name": "shitcoinbot",
+  "version": "0.0.1",
+  "description": "Experimental ShitCoin Trading Bot",
+  "engines": {
+    "node": "10.0.0"
+  },
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "audio-loader": "^1.0.3",
+    "audio-play": "^2.2.0",
+    "express": "^4.15.2",
+    "lodash": "^4.17.4",
+    "moment": "^2.20.1",
+    "node-binance-api": "^0.4.4",
+    "nodemailer": "^4.4.1",
+    "numeral": "^2.0.6",
+    "ws": "^4.0.0"
+  },
+  "devDependencies": {
+    "request": "^2.81.0"
+  }
+}
