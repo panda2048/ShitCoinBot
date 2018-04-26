@@ -24,12 +24,10 @@ const nodemailer = require('nodemailer')
 const APIKEY = 'xxx'
 const APISECRET = 'xxx'
 
-const tracked_max = 10
+const tracked_max = 1
 const depth_limit = 10
 const wait_time = 1000 			// ms
 const trading_fee = 0.1 		// pourcent
-
-const sound_alert = false
 
 // https://medium.com/@manojsinghnegi/sending-an-email-using-nodemailer-gmail-7cfa0712a799
 const send_email = false
@@ -106,7 +104,6 @@ console.log('------------ NBT starting -------------')
 
 async function run() {
 
-	if (sound_alert) load('./alert.mp3').then(play);
 	await sleep(2)
 
 	console.log('------------------------------')
@@ -153,7 +150,6 @@ async function run() {
 	console.log('------------------------------')
 
 	console.log('------------ we are ready to track all strategies -------------')
-	if (sound_alert) load('./alert.mp3').then(play)
 }
 
 sleep = (x) => {
@@ -301,7 +297,6 @@ trackFutureMinutePrices = (pair) => {
 								+ " C:" + close 
 								+ " D:%" + numeral(depth_diff[symbol]).format("0.000") 
 								+ " https://www.binance.com/tradeDetail.html?symbol=" + symbol.slice(0, -3) + "_BTC")
-							if (sound_alert) load('./alert.mp3').then(play)
 							if ( typeof tracked_data[symbol] === 'undefined' ) {
 								tracked_data[symbol] = {}
 							}
@@ -363,7 +358,6 @@ trackFutureMinutePrices = (pair) => {
 									}, 2000 )
 								});
 							}
-							if (sound_alert) load('./alert.mp3').then(play)
 							tracked_pairs = tracked_pairs.filter(o => !( (o.strat === strat.name) && (o.symbol === symbol) ))
 						}
 					} 
@@ -374,10 +368,23 @@ trackFutureMinutePrices = (pair) => {
 	})
 }
 
+console.log = (function() {
+  var console_log = console.log;
+  
+  return function() {
+    var args = [];
+    args.push(new Date().toISOString() + ' : ');
+    for(var i = 0; i < arguments.length; i++) {
+      args.push(arguments[i]);
+    }
+    console_log.apply(console, args);
+  };
+})();
+
 run()
 
 console.log("----------------------")
 
 const app = express()
 app.get('/', (req, res) => res.send(tracked_pairs))
-app.listen(process.env.PORT || 80, () => console.log('NBT api accessable on port 80'))
+app.listen(8080, () => console.log('NBT api accessable on port 8080'))
