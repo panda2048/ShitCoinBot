@@ -33,6 +33,7 @@ let avgBuyVol2 = []
 
 let isTrading = []
 let metFirstTarget = []
+let initVol = []
 let buyingPrice = []
 let tradingTime = []
 
@@ -54,27 +55,40 @@ bump_detect = (pair, tick) => {
 			if (isFinal && buyPercentVol > 0.7 && averageBuyVol > 1 && averageBuyVol2 > 1 && priceDiff >= 0.002 && quoteBuyVolume >= vol[pair]/200) {
 				console.log(pair + " 1 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
 				metFirstTarget[pair] = true
+				initVol[pair] = quoteBuyVolume
 			}
 		} else {
-			if (quoteBuyVolume >= minute_prices[pair][0][10]*0.7 && averageBuyVol > 1 && averageBuyVol2 > 1 && priceDiff >= 0) {
-				console.log(pair + " 2 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
+			if (buyPercentVol > 0.7 && quoteBuyVolume >= minute_prices[pair][0][10]*0.5 && averageBuyVol > 1 && averageBuyVol2 > 1 && priceDiff >= 0 && quoteBuyVolume >= initVol[pair]*1.4) {
+				console.log(pair + " 2.1 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
 				metFirstTarget[pair] = false
 				tradingTime[pair] = time
 				return "BUY"
 			} else if (isFinal) {
-				console.log(pair + " 2 > reset")
+				console.log(pair + " 2.2 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
+				console.log(pair + " 2.2 > reset")
 				metFirstTarget[pair] = false
 			}
 		}
 		return "HOLD"
-	} else if (tradingTime[pair] != time) {
-		if (isFinal && quoteBuyVolume >= minute_prices[pair][0][10]*0.8  && priceDiff >= -0.004) {
-			console.log(pair + " 3 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
-			return "HOLD"
-		} 
-		if (isFinal) {
-			console.log(pair + " 4 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
+	} else {
+		if (quoteBuyVolume >= initVol[pair]*1.4) {
+			console.log(pair + " 3.1 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
 			return "SELL"
+		}
+		if (tradingTime[pair] != time) {
+			if (quoteBuyVolume >= minute_prices[pair][0][10]*0.6 && priceDiff <= -0.004) {
+				console.log(pair + " 3.2 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
+				return "SELL"
+			} 
+			if (isFinal) {
+				if (quoteBuyVolume >= minute_prices[pair][0][10]*0.6) {
+					console.log(pair + " 3.3 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
+					return "HOLD"
+				} else {
+					console.log(pair + " 3.4 > " + buyPercentVol + "," + averageBuyVol + "," + averageBuyVol2 + "," + priceDiff + "," + quoteBuyVolume)
+					return "SELL"
+				}
+			}
 		}
 	}
 }
@@ -106,6 +120,14 @@ async function run() {
 	await sleep(2)
 
 	console.log('------------------------------')
+	console.log(' trackVolumeData start')
+	console.log('------------------------------')
+	await trackVolumeData()
+	console.log('------------------------------')
+
+	await sleep(2)
+
+	console.log('------------------------------')
 	console.log(' trackMinutePrices start')
 	console.log('------------------------------')
 	await trackMinutePrices()
@@ -121,7 +143,6 @@ sleep = (x) => {
 }
 
 function filterPairs(pair) {
-	vol[pair.symbol] = pair.quoteVolume 
 	if (pair.symbol.endsWith('BTC') && pair.quoteVolume >= 400 && pair.quoteVolume <= 99999) {
     		return true;
 	} 
@@ -140,6 +161,27 @@ get_BTC_pairs = () => {
 			}
 		})
 	})
+}
+
+trackVolumePair = (pair) => {
+	return new Promise(resolve => {
+		binance.websockets.prevDay([pair], (error, data) => {
+			if (error) {
+				console.log( error )
+				resolve([])
+			}
+			vol[pair] = data.quoteVolume 
+			//console.log(pair + "=" + data.quoteVolume)
+			resolve(true)
+		})
+	})
+}
+
+async function trackVolumeData() {
+	for (var i = 0, len = pairs.length; i < len; i++) {
+		var pair = pairs[i]
+		trackVolumePair(pair)
+	}
 }
 
 trackDepthPair = (pair) => {
@@ -209,12 +251,12 @@ trackFutureMinutePrices = (pair) => {
 					if (strat.condition(symbol, ticks) === "BUY") {
 						isTrading[pair]=true
 						buyingPrice[pair] = close
-						console.log("BUY " + symbol + " - " + close + " = " + vol[symbol])
+						console.log(symbol + " BUY - " + close + " = " + vol[symbol])
 					}	
 				} else {
 					if (strat.condition(symbol, ticks) === "SELL") {
 						isTrading[pair]=false
-						console.log("SELL " + symbol + " - " + close + " - " + vol[symbol])
+						console.log(symbol + " SELL - " + close + " - " + vol[symbol])
 						let profit = ((close - buyingPrice[pair]) / buyingPrice[pair]) - 0.001
 						totalProfit += profit
 						console.log(symbol + " > Profit: " + profit + " / Net: " + totalProfit)
